@@ -1,0 +1,80 @@
+/* Telegram Mini App Styles */
+
+/* Base styles for the app when running in Telegram */
+.mobile-body {
+  overflow: hidden;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.mobile-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.mobile-content {
+  height: calc(100% + 1px);
+  min-height: 100vh;
+}
+
+/* Button styles using Telegram theme colors */
+.telegram-btn {
+  background-color: var(--tg-theme-button-color, #50a8eb);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.telegram-btn:hover {
+  opacity: 0.9;
+}
+
+.telegram-btn:active {
+  opacity: 0.8;
+}
+
+/* Card styles using Telegram theme colors */
+.telegram-card {
+  background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+  color: var(--tg-theme-text-color, #000000);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* Link styles using Telegram theme colors */
+.telegram-link {
+  color: var(--tg-theme-link-color, #2481cc);
+  text-decoration: none;
+}
+
+.telegram-link:hover {
+  text-decoration: underline;
+}
+
+/* Header styles */
+.telegram-header {
+  background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+  color: var(--tg-theme-text-color, #000000);
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--tg-theme-hint-color, #dddddd);
+}
+
+/* Hint text */
+.telegram-hint {
+  color: var(--tg-theme-hint-color, #999999);
+  font-size: 14px;
+}
