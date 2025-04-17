@@ -1,49 +1,29 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useTelegram } from '../composables/useTelegram'
 
 const { user } = useTelegram()
-const selectedPackage = ref(null)
-const selectedAmount = ref('')
-const selectedPrice = ref('')
 const usernameInput = ref('')
 const purchaseType = ref('self')
+const tonPriceDisplay = ref('💰 Select a package to see TON price')
+const tonPriceInUsd = ref(0)
+const selectedMonths = ref(null)
 const showOrderModal = ref(false)
 const orderDetails = ref({
   orderId: '',
   username: '',
-  amount: 0,
+  amount: '',
   price: 0,
   tonAmount: 0,
   tonkeeperLink: '',
   paymentLink: '',
 })
 
-const starsPackages = [
-  { amount: 100, price: 1.7 },
-  { amount: 150, price: 2.55 },
-  { amount: 250, price: 4.25 },
-  { amount: 350, price: 5.95 },
-  { amount: 500, price: 8.5 },
-  { amount: 750, price: 12.75 },
-  { amount: 1000, price: 16.5 },
-  { amount: 1500, price: 25 },
-  { amount: 2500, price: 42 },
-  { amount: 5000, price: 84 },
-  { amount: 10000, price: 165 },
-  { amount: 25000, price: 410 },
-  { amount: 35000, price: 570 },
-  { amount: 50000, price: 810 },
-  { amount: 100000, price: 1600 },
-  { amount: 150000, price: 2380 },
-  { amount: 500000, price: 7700 },
-  { amount: 1000000, price: 15500 },
+const subscriptionOptions = [
+  { months: 3, price: 14 },
+  { months: 6, price: 19 },
+  { months: 12, price: 33 },
 ]
-
-const orderButtonText = computed(() => {
-  return selectedPackage.value !== null
-    ? `Order ${starsPackages[selectedPackage.value].amount} Stars`
-    : 'Order'
-})
 
 function updateRecipient() {
   if (purchaseType.value === 'self') {
@@ -54,30 +34,27 @@ function updateRecipient() {
   }
 }
 
-function formatAmount(amount) {
-  if (amount >= 1000000) {
-    return `${amount / 1000000}M`
+function selectSubscription(months: number, price: number) {
+  selectedMonths.value = months
+  if (tonPriceInUsd.value > 0) {
+    const tonAmount = (price / tonPriceInUsd.value).toFixed(2)
+    tonPriceDisplay.value = `💰 ${tonAmount} TON`
   }
-  if (amount >= 1000) {
-    return `${amount / 1000}K`
+  else {
+    tonPriceDisplay.value = '❌ Failed to load TON price'
   }
-  return amount.toString()
-}
-
-function selectStarPackage(index) {
-  selectedPackage.value = index
-  selectedAmount.value = `Number of stars: ${formatAmount(starsPackages[index].amount)}`
-  selectedPrice.value = `Price: ~ $${starsPackages[index].price.toFixed(2)}`
 }
 
 async function fetchTonPrice() {
   try {
     const response = await fetch('https://tonapi.io/v2/rates?tokens=ton&currencies=usd')
     const data = await response.json()
+    tonPriceInUsd.value = data.rates.TON.prices.USD
     return data.rates.TON.prices.USD
   }
   catch (error) {
     console.error('Error fetching TON price:', error)
+    tonPriceDisplay.value = '❌ Failed to load TON price'
     return null
   }
 }
@@ -100,30 +77,15 @@ async function fetchTonReceiver() {
   }
 }
 
-async function buyStars() {
-  if (selectedPackage.value === null) {
-    if (window.Swal) {
-      window.Swal.fire({
-        icon: 'warning',
-        title: '⚠️ Missing Information',
-        text: 'Please select a star package first.',
-        confirmButtonColor: '#3085d6',
-        confirmButtonText: 'OK',
-      })
-    }
-    return
-  }
-
-  const amount = starsPackages[selectedPackage.value].amount
-  const price = starsPackages[selectedPackage.value].price
+async function buyPremium() {
   const username = usernameInput.value.trim()
 
-  if (!username) {
+  if (!username || selectedMonths.value === null) {
     if (window.Swal) {
       window.Swal.fire({
         icon: 'warning',
         title: '⚠️ Missing Information',
-        text: 'Please enter a valid username.',
+        text: 'Please select a subscription and enter a valid username.',
         confirmButtonColor: '#3085d6',
         confirmButtonText: 'OK',
       })
@@ -131,20 +93,30 @@ async function buyStars() {
     return
   }
 
-  const tonPriceInUsd = await fetchTonPrice()
-  if (!tonPriceInUsd) {
-    if (window.Swal) {
-      window.Swal.fire({
-        icon: 'error',
-        title: '❌ TON Price Error',
-        text: 'Failed to fetch TON price. Please try again later.',
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Retry',
-      })
-    }
+  const option = subscriptionOptions.find(opt => opt.months === selectedMonths.value)
+  if (!option)
     return
+
+  const price = option.price
+
+  // Get TON price
+  if (!tonPriceInUsd.value) {
+    const price = await fetchTonPrice()
+    if (!price) {
+      if (window.Swal) {
+        window.Swal.fire({
+          icon: 'error',
+          title: '❌ TON Price Error',
+          text: 'Failed to fetch TON price. Please try again later.',
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'Retry',
+        })
+      }
+      return
+    }
   }
 
+  // Get TON receiver address
   const tonReceiver = await fetchTonReceiver()
   if (!tonReceiver) {
     if (window.Swal) {
@@ -159,10 +131,12 @@ async function buyStars() {
     return
   }
 
-  const tonAmount = (price / tonPriceInUsd + 0.01).toFixed(2)
+  const tonAmount = (price / tonPriceInUsd.value + 0.01).toFixed(2)
+
+  // Create unique order ID
   const timestamp = Date.now()
   const randomString = Math.random().toString(36).substring(2, 10)
-  const rawOrderId = `${timestamp}-${username}-${amount}-${randomString}`
+  const rawOrderId = `${timestamp}-${username}-${selectedMonths.value}-${randomString}`
 
   // Generate order ID with SHA-256
   const encoder = new TextEncoder()
@@ -171,19 +145,21 @@ async function buyStars() {
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const orderId = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('').substring(0, 20)
 
+  // Create payment links
   const tonkeeperLink = `tonkeeper://transfer/${tonReceiver}?amount=${Math.round(tonAmount * 1e9)}&text=${encodeURIComponent(orderId)}`
   const paymentLink = `https://app.tonkeeper.com/transfer/${tonReceiver}?amount=${Math.round(tonAmount * 1e9)}&text=${encodeURIComponent(orderId)}`
 
+  // Send order to backend
   const userId = user.value?.id || 'null'
   const queryParams = new URLSearchParams({
     userId,
-    amount,
+    amount: selectedMonths.value.toString(),
     username,
-    price,
+    price: price.toString(),
     tonAmount,
     paymentLink,
     orderId,
-    service: 'Buy Star',
+    service: 'Buy Premium',
   }).toString()
 
   fetch(`/api/process-payment?${queryParams}`, { method: 'GET' })
@@ -192,7 +168,7 @@ async function buyStars() {
   orderDetails.value = {
     orderId,
     username,
-    amount,
+    amount: `${selectedMonths.value} Months`,
     price,
     tonAmount,
     tonkeeperLink,
@@ -205,7 +181,7 @@ function closeOrderModal() {
   showOrderModal.value = false
 }
 
-async function checkTransaction(orderId) {
+async function checkTransaction(orderId: string) {
   try {
     const response = await fetch('/api/check-transaction', {
       method: 'POST',
@@ -248,7 +224,7 @@ async function checkTransaction(orderId) {
   }
 }
 
-async function cancelOrder(orderId) {
+async function cancelOrder(orderId: string) {
   try {
     const response = await fetch('/api/cancel-order', {
       method: 'POST',
@@ -292,8 +268,9 @@ async function cancelOrder(orderId) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   updateRecipient()
+  await fetchTonPrice()
 })
 </script>
 
@@ -301,13 +278,12 @@ onMounted(() => {
   <div class="p-5 max-w-md mx-auto">
     <div class="bg-gray-800 rounded-xl p-6 shadow-lg text-white">
       <div class="flex flex-col items-center">
-        <div class="gift-box" />
-        <div id="user-info" style="padding: 10px;" />
-        <h2 class="text-xl font-bold mt-2 mb-1 text-yellow-400 text-center">
-          Telegram Stars
+        <div class="premium-logo" />
+        <h2 class="text-xl font-bold mt-2 mb-1 text-blue-400 text-center">
+          Telegram Premium
         </h2>
         <p class="text-sm text-gray-300 text-center">
-          Gift Telegram Stars to enhance the experience for yourself and your loved ones!
+          Get a Verified Blue Check by upgrading to Telegram Premium.
         </p>
       </div>
 
@@ -346,39 +322,32 @@ onMounted(() => {
         >
       </div>
 
-      <div class="grid grid-cols-3 gap-2 mt-4">
+      <div class="grid grid-cols-3 gap-3 mt-4">
         <div
-          v-for="(pkg, index) in starsPackages"
-          :key="index"
-          class="py-2 px-1 rounded-md text-sm transition-colors cursor-pointer"
-          :class="[
-            selectedPackage === index
-              ? 'bg-blue-600 font-bold'
-              : 'bg-gray-600 hover:bg-gray-500',
-          ]"
-          @click="selectStarPackage(index)"
+          v-for="option in subscriptionOptions"
+          :key="option.months"
+          class="bg-gray-700 p-3 rounded-lg text-center cursor-pointer transition-colors hover:bg-gray-600"
+          :class="{ 'bg-blue-600': selectedMonths === option.months }"
+          @click="selectSubscription(option.months, option.price)"
         >
-          {{ formatAmount(pkg.amount) }} ⭐
+          <div class="text-sm">
+            For {{ option.months }} Months
+          </div>
+          <div class="font-bold">
+            ${{ option.price }}
+          </div>
         </div>
       </div>
 
-      <div
-        v-if="selectedPackage !== null"
-        class="bg-gray-700 rounded-lg p-4 mt-4"
-      >
-        <p class="text-base">
-          {{ selectedAmount }}
-        </p>
-        <p class="text-base">
-          {{ selectedPrice }}
-        </p>
+      <div class="text-center p-4 mt-4 bg-gray-700 rounded-lg font-medium">
+        {{ tonPriceDisplay }}
       </div>
 
       <button
-        class="w-full bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-lg mt-4 hover:bg-yellow-600 transition-colors"
-        @click="buyStars"
+        class="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg mt-4 hover:bg-blue-600 transition-colors"
+        @click="buyPremium"
       >
-        {{ orderButtonText }}
+        Order Telegram Premium
       </button>
     </div>
 
@@ -392,7 +361,7 @@ onMounted(() => {
         <div class="text-white mb-6 space-y-2">
           <p><strong>Order ID:</strong> {{ orderDetails.orderId }}</p>
           <p><strong>Username:</strong> {{ orderDetails.username }}</p>
-          <p><strong>Amount:</strong> {{ orderDetails.amount }} Stars</p>
+          <p><strong>Amount:</strong> {{ orderDetails.amount }}</p>
           <p><strong>Price:</strong> ${{ orderDetails.price }}</p>
           <p><strong>TON Amount:</strong> {{ orderDetails.tonAmount }} TON</p>
         </div>
@@ -441,10 +410,10 @@ onMounted(() => {
 </template>
 
 <style>
-.gift-box {
+.premium-logo {
   width: 80px;
   height: 80px;
-  background-image: url('/src/assets/star.jpg');
+  background-image: url('/src/assets/pre.avif');
   background-size: cover;
   background-position: center;
   border-radius: 10px;

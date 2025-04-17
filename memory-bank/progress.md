@@ -15,6 +15,8 @@
 - [x] Navigation components
 - [x] Home page
 - [x] SwapStar interface
+- [x] BuyStar interface
+- [x] BuyPremium interface
 - [x] User profile display
 - [x] Responsive design
 
@@ -24,7 +26,10 @@
 - [x] Stars balance checking
 - [x] TON rate fetching
 - [x] Basic swap functionality
+- [x] Stars purchase functionality
+- [x] Premium subscription functionality
 - [x] Wallet address input
+- [x] Payment processing
 
 ## In Progress
 - [ ] Enhanced error handling

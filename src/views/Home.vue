@@ -1,132 +1,19 @@
-<script>
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { usePopup } from 'vue-tg'
+import { useMiniApp } from 'vue-tg/latest'
+import TonConnectTrigger from '../components/TonConnecTrigger.vue'
+import { useUserStore } from '../stores/useUserStore'
 
-export default {
-  setup() {
-    const router = useRouter()
-    const user = ref(null)
-    const phoneNumber = ref('Click to share your contact')
+const userStore = useUserStore()
+userStore.init()
 
-    const updateUserInfo = (userData, phone = 'Click to share your contact') => {
-      user.value = userData
-      phoneNumber.value = phone
-    }
+const { locale } = useI18n()
 
-    const requestPhoneNumber = () => {
-      return new Promise((resolve, reject) => {
-        if (window.Telegram) {
-          window.Telegram.WebApp.requestContact((sent, event) => {
-            if (sent) {
-              const phone = event?.responseUnsafe?.contact?.phone_number || ''
-              resolve(phone)
-            }
-            else {
-              reject(new Error('User denied contact sharing.'))
-            }
-          })
-        }
-        else {
-          reject(new Error('Telegram WebApp not available'))
-        }
-      })
-    }
+const user = computed(() => userStore.userInfo)
 
-    const updatePhoneNumber = async (id, phone) => {
-      const apiUrl = `/api/updateuser?id=${encodeURIComponent(id)}
-        &phone=${encodeURIComponent(phone)}`.replace(/\s+/g, '')
-
-      try {
-        const response = await fetch(apiUrl)
-        const data = await response.json()
-
-        if (data.message && data.message.includes('✅')) {
-          updateUserInfo(user.value, phone)
-        }
-        else {
-          console.error('⚠️ Error from server:', data)
-        }
-      }
-      catch (error) {
-        console.error('❌ Error updating phone:', error)
-      }
-    }
-
-    const saveUserToDB = async (userData, phone = '') => {
-      if (!userData?.id) {
-        console.error('❌ User ID is missing!')
-        return
-      }
-
-      const apiUrl = `/api/adduser?id=${encodeURIComponent(userData.id)}
-        &username=${encodeURIComponent(userData.username || '')}
-        &name=${encodeURIComponent(`${userData.first_name} ${userData.last_name || ''}`)}
-        &phone=${encodeURIComponent(phone)}
-        &pic=${encodeURIComponent(userData.photo_url || '')}`.replace(/\s+/g, '')
-
-      try {
-        const response = await fetch(apiUrl)
-        const data = await response.json()
-
-        if (!data.message || !data.message.includes('✅')) {
-          console.error('⚠️ Error from server:', data)
-        }
-      }
-      catch (error) {
-        console.error('❌ Error saving user:', error)
-      }
-    }
-
-    const checkUserContact = async (userData) => {
-      if (!userData?.id) {
-        console.warn('⚠️ User ID is missing!')
-        return
-      }
-
-      const apiUrl = `/api/getuser?id=${encodeURIComponent(userData.id)}`
-      try {
-        const response = await fetch(apiUrl)
-        const data = await response.json()
-
-        if (data?.user?.phone) {
-          updateUserInfo(userData, data.user.phone)
-        }
-        else {
-          console.warn('⚠️ No phone found, requesting contact...')
-          const phone = await requestPhoneNumber()
-          updateUserInfo(userData, phone)
-          await updatePhoneNumber(userData.id, phone)
-        }
-      }
-      catch (error) {
-        console.error('❌ Error checking user contact:', error)
-      }
-    }
-
-    const navigateTo = (path) => {
-      router.push(path)
-    }
-
-    onMounted(async () => {
-      // Initialize Telegram WebApp
-      // if (window.Telegram) {
-      //   window.Telegram.WebApp.ready()
-      //   user.value = window.Telegram.WebApp.initDataUnsafe?.user || null
-
-      //   if (user.value?.id) {
-      //     await saveUserToDB(user.value)
-      //     await checkUserContact(user.value)
-      //   }
-      // }
-    })
-
-    return {
-      user,
-      phoneNumber,
-      navigateTo,
-    }
-  },
-}
+locale.value = user.value?.language_code || 'en'
 </script>
 
 <template>
@@ -139,18 +26,13 @@ export default {
           <p class="text-base font-medium my-1">
             {{ user.first_name }} {{ user.last_name || '' }} (@{{ user.username || 'Unknown' }})
           </p>
-          <p class="text-base my-1">
-            📞 +{{ phoneNumber }}
-          </p>
+          <TonConnectTrigger />
         </div>
       </div>
       <p v-else class="text-center">
         Loading user data...
       </p>
     </div>
-    <p class="text-base">
-      Buy airtime and airtime package
-    </p>
     <div class="flex bg-gray-800 shadow-lg rounded-xl p-5 my-5 w-full max-w-xl mx-auto hover:-translate-y-1 transition-transform">
       <img src="@/assets/game.webp" alt="Games" class="w-12 h-12 rounded-xl mr-4">
       <div class="flex-1 text-left">

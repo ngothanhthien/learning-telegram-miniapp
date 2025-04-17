@@ -1,217 +1,210 @@
-<script>
+<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useTonStore } from '../stores/useTonStore'
 
-export default {
-  setup() {
-    const selectedStars = ref(0)
-    const exchangeRate = ref(0.000001) // TON per Star
-    const user = ref(null)
-    const showInputDialog = ref(false)
-    const walletInputValue = ref('')
-    const showConfirmDialog = ref(false)
-    const walletResolveCallback = ref(null)
-    const confirmResolveCallback = ref(null)
+const tonStore = useTonStore()
 
-    const starOptions = [
-      { value: 100, label: '100' },
-      { value: 250, label: '250' },
-      { value: 500, label: '500' },
-      { value: 750, label: '750' },
-      { value: 1000, label: '1K' },
-      { value: 1500, label: '1.5K' },
-      { value: 2000, label: '2K' },
-      { value: 2500, label: '2.5K' },
-      { value: 3000, label: '3K' },
-      { value: 3500, label: '3.5K' },
-      { value: 4000, label: '4K' },
-      { value: 4500, label: '4.5K' },
-      { value: 5000, label: '5K' },
-      { value: 6000, label: '6K' },
-      { value: 7000, label: '7K' },
-      { value: 8000, label: '8K' },
-      { value: 9000, label: '9K' },
-      { value: 10000, label: '10K' },
-    ]
+setInterval(() => {
+  tonStore.fetchTonRate()
+}, 10000)
 
-    const tonAmount = computed(() => {
-      return (selectedStars.value * exchangeRate.value).toFixed(6)
+const tonRate = computed(() => {
+  return tonStore.tonRate
+})
+
+const selectedStars = ref(0)
+const user = ref(null)
+const showInputDialog = ref(false)
+const walletInputValue = ref('')
+const showConfirmDialog = ref(false)
+const walletResolveCallback = ref(null)
+const confirmResolveCallback = ref(null)
+
+const starOptions = [
+  { value: 100, label: '100' },
+  { value: 250, label: '250' },
+  { value: 500, label: '500' },
+  { value: 750, label: '750' },
+  { value: 1000, label: '1K' },
+  { value: 1500, label: '1.5K' },
+  { value: 2000, label: '2K' },
+  { value: 2500, label: '2.5K' },
+  { value: 3000, label: '3K' },
+  { value: 3500, label: '3.5K' },
+  { value: 4000, label: '4K' },
+  { value: 4500, label: '4.5K' },
+  { value: 5000, label: '5K' },
+  { value: 6000, label: '6K' },
+  { value: 7000, label: '7K' },
+  { value: 8000, label: '8K' },
+  { value: 9000, label: '9K' },
+  { value: 10000, label: '10K' },
+]
+
+const tonAmount = computed(() => {
+  return (selectedStars.value * tonRate.value).toFixed(6)
+})
+
+function selectStars(amount: number) {
+  selectedStars.value = amount
+}
+
+async function checkUserStars(userId) {
+  if (!userId)
+    return { success: false, stars: 0 }
+
+  try {
+    const response = await fetch(`/api/getstars?id=${encodeURIComponent(userId)}`)
+    const data = await response.json()
+    return { success: true, stars: data.stars || 0 }
+}
+  catch (error) {
+    console.error('Error fetching stars:', error)
+    return { success: false, stars: 0 }
+  }
+}
+
+function confirmWalletInput() {
+  if (walletResolveCallback.value && walletInputValue.value) {
+    walletResolveCallback.value(walletInputValue.value)
+    showInputDialog.value = false
+    walletInputValue.value = ''
+    walletResolveCallback.value = null
+  }
+}
+
+function confirmSwap() {
+  if (confirmResolveCallback.value) {
+    confirmResolveCallback.value(true)
+    showConfirmDialog.value = false
+    confirmResolveCallback.value = null
+  }
+}
+
+async function promptForWalletAddress() {
+  if (window.Swal) {
+    const { value: walletAddress } = await window.Swal.fire({
+      title: 'Enter your TON wallet address',
+      input: 'text',
+      inputPlaceholder: 'Wallet address',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to provide a wallet address!'
+        }
+      },
     })
 
-    const selectStars = (amount) => {
-      selectedStars.value = amount
-    }
+    return walletAddress
+  }
+  else {
+    // Use custom dialog instead of prompt
+    return new Promise((resolve) => {
+      walletResolveCallback.value = resolve
+      walletInputValue.value = ''
+      showInputDialog.value = true
+    })
+  }
+}
 
-    const checkUserStars = async (userId) => {
-      if (!userId)
-        return { success: false, stars: 0 }
-
-      try {
-        const response = await fetch(`/api/getstars?id=${encodeURIComponent(userId)}`)
-        const data = await response.json()
-        return { success: true, stars: data.stars || 0 }
-      }
-      catch (error) {
-        console.error('Error fetching stars:', error)
-        return { success: false, stars: 0 }
-      }
-    }
-
-    const confirmWalletInput = () => {
-      if (walletResolveCallback.value && walletInputValue.value) {
-        walletResolveCallback.value(walletInputValue.value)
-        showInputDialog.value = false
-        walletInputValue.value = ''
-        walletResolveCallback.value = null
-      }
-    }
-
-    const confirmSwap = () => {
-      if (confirmResolveCallback.value) {
-        confirmResolveCallback.value(true)
-        showConfirmDialog.value = false
-        confirmResolveCallback.value = null
-      }
-    }
-
-    const promptForWalletAddress = async () => {
-      if (window.Swal) {
-        const { value: walletAddress } = await window.Swal.fire({
-          title: 'Enter your TON wallet address',
-          input: 'text',
-          inputPlaceholder: 'Wallet address',
-          showCancelButton: true,
-          inputValidator: (value) => {
-            if (!value) {
-              return 'You need to provide a wallet address!'
-            }
-          },
-        })
-
-        return walletAddress
-      }
-      else {
-        // Use custom dialog instead of prompt
-        return new Promise((resolve) => {
-          walletResolveCallback.value = resolve
-          walletInputValue.value = ''
-          showInputDialog.value = true
-        })
-      }
-    }
-
-    const showConfirmation = () => {
-      return new Promise((resolve) => {
-        if (window.Swal) {
-          window.Swal.fire({
-            title: 'Confirm Swap',
-            text: `Swap ${selectedStars.value} Stars for ${tonAmount.value} TON?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Swap',
-            cancelButtonText: 'Cancel',
-          }).then((result) => {
-            resolve(result.isConfirmed)
-          })
-        }
-        else {
-          confirmResolveCallback.value = resolve
-          showConfirmDialog.value = true
-        }
+function showConfirmation() {
+  return new Promise((resolve) => {
+    if (window.Swal) {
+      window.Swal.fire({
+        title: 'Confirm Swap',
+        text: `Swap ${selectedStars.value} Stars for ${tonAmount.value} TON?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Swap',
+        cancelButtonText: 'Cancel',
+      }).then((result) => {
+        resolve(result.isConfirmed)
       })
     }
-
-    const processSwap = async () => {
-      try {
-        // Get wallet address, could be from user input or stored data
-        const walletAddress = await promptForWalletAddress()
-
-        if (!walletAddress) {
-          console.error('Wallet address is required')
-          return
-        }
-
-        // Call API to process the swap
-        const apiUrl = `/api/swapstars?id=${encodeURIComponent(user.value?.id || '')}
-          &stars=${encodeURIComponent(selectedStars.value)}
-          &wallet=${encodeURIComponent(walletAddress)}`.replace(/\s+/g, '')
-
-        const response = await fetch(apiUrl)
-        const data = await response.json()
-
-        if (data.success) {
-          if (window.Swal) {
-            window.Swal.fire({
-              title: 'Success!',
-              text: `Your ${tonAmount.value} TON will be sent to your wallet shortly!`,
-              icon: 'success',
-            })
-          }
-          else {
-            console.warn(`Success! Your ${tonAmount.value} TON will be sent to your wallet shortly!`)
-          }
-
-          // Reset selection
-          selectedStars.value = 0
-        }
-        else {
-          console.error(data.message || 'Swap failed. Please try again.')
-        }
-      }
-      catch (error) {
-        console.error('Error processing swap:', error)
-      }
+    else {
+      confirmResolveCallback.value = resolve
+      showConfirmDialog.value = true
     }
-
-    const swapNow = async () => {
-      if (!selectedStars.value)
-        return
-
-      if (!window.Telegram?.WebApp) {
-        console.error('Telegram WebApp is not available')
-        return
-      }
-
-      try {
-        // Check if user has enough stars
-        const response = await checkUserStars(user.value?.id)
-
-        if (response.success && response.stars >= selectedStars.value) {
-          const confirmed = await showConfirmation()
-          if (confirmed) {
-            processSwap()
-          }
-        }
-        else {
-          console.warn(`You don't have enough stars. Your balance: ${response.stars || 0} Stars`)
-        }
-      }
-      catch (error) {
-        console.error('Error checking stars balance:', error)
-      }
-    }
-
-    // onMounted(() => {
-    //   // Initialize Telegram WebApp
-    //   if (window.Telegram) {
-    //     window.Telegram.WebApp.ready()
-    //     user.value = window.Telegram.WebApp.initDataUnsafe?.user || null
-    //   }
-    // })
-
-    return {
-      selectedStars,
-      tonAmount,
-      starOptions,
-      selectStars,
-      swapNow,
-      showInputDialog,
-      walletInputValue,
-      showConfirmDialog,
-      confirmWalletInput,
-      confirmSwap,
-    }
-  },
+  })
 }
+
+async function processSwap() {
+  try {
+    // Get wallet address, could be from user input or stored data
+    const walletAddress = await promptForWalletAddress()
+
+    if (!walletAddress) {
+      console.error('Wallet address is required')
+      return
+    }
+
+    // Call API to process the swap
+    const apiUrl = `/api/swapstars?id=${encodeURIComponent(user.value?.id || '')}
+      &stars=${encodeURIComponent(selectedStars.value)}
+      &wallet=${encodeURIComponent(walletAddress)}`.replace(/\s+/g, '')
+
+    const response = await fetch(apiUrl)
+    const data = await response.json()
+
+    if (data.success) {
+      if (window.Swal) {
+        window.Swal.fire({
+          title: 'Success!',
+          text: `Your ${tonAmount.value} TON will be sent to your wallet shortly!`,
+          icon: 'success',
+        })
+      }
+      else {
+        console.warn(`Success! Your ${tonAmount.value} TON will be sent to your wallet shortly!`)
+      }
+
+      // Reset selection
+      selectedStars.value = 0
+    }
+    else {
+      console.error(data.message || 'Swap failed. Please try again.')
+    }
+  }
+  catch (error) {
+    console.error('Error processing swap:', error)
+  }
+}
+
+async function swapNow() {
+  if (!selectedStars.value)
+    return
+
+  if (!window.Telegram?.WebApp) {
+    console.error('Telegram WebApp is not available')
+    return
+  }
+
+  try {
+    // Check if user has enough stars
+    const response = await checkUserStars(user.value?.id)
+
+    if (response.success && response.stars >= selectedStars.value) {
+      const confirmed = await showConfirmation()
+      if (confirmed) {
+        processSwap()
+      }
+    }
+    else {
+      console.warn(`You don't have enough stars. Your balance: ${response.stars || 0} Stars`)
+    }
+  }
+  catch (error) {
+    console.error('Error checking stars balance:', error)
+  }
+}
+
+onMounted(() => {
+  // Initialize Telegram WebApp
+  if (window.Telegram) {
+    window.Telegram.WebApp.ready()
+    user.value = window.Telegram.WebApp.initDataUnsafe?.user || null
+  }
+})
 </script>
 
 <template>

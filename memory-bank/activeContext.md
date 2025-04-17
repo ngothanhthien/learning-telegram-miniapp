@@ -1,7 +1,8 @@
 # Active Context
 
 ## Current Focus
-- Initializing Memory Bank documentation
+- Implementing the BuyPremium functionality
+- Implementing the BuyStar functionality
 - Setting up project structure
 - Documenting system architecture
 - Establishing development patterns
@@ -18,17 +19,22 @@
    - State management with Pinia
    - Telegram authentication
    - Stars to TON exchange interface
+   - Stars purchase interface
+   - Premium subscription interface
 
 3. UI Components
    - Home page layout
    - SwapStar interface
+   - BuyStar interface
+   - BuyPremium interface
    - Navigation components
    - User profile display
+   - Payment processing modal
 
 ## Active Decisions
 
 ### Technical Decisions
-1. Using Vue 3 Composition API
+1. Using Vue 3 Composition API with script setup syntax
    - Better TypeScript support
    - Improved code organization
    - Enhanced reusability
@@ -53,14 +59,15 @@
    - Streamlined transaction flow
    - Clear error messages
    - Progress indicators
+   - Modal-based interaction for payments
 
 ## Next Steps
-1. Complete Memory Bank documentation
-2. Review and update technical documentation
+1. Complete payment processing functionality
+2. Implement transaction history
 3. Implement additional features:
    - Enhanced error handling
-   - Transaction history
    - User settings
+   - Transaction tracking
 4. Optimize performance
 5. Add testing infrastructure
 
@@ -69,6 +76,7 @@
    - API endpoint protection
    - Data validation
    - User authentication
+   - Payment verification
 
 2. Performance
    - Bundle size optimization
@@ -79,6 +87,7 @@
    - Loading states
    - Error handling
    - Feedback mechanisms
+   - Transaction confirmation
 
 ## Active Issues
 1. Documentation

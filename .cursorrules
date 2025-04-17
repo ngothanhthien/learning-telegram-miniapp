@@ -1,0 +1,80 @@
+# Project Intelligence: Telegram Stars Exchange
+
+## Project Structure
+- Vue 3 with Composition API is used throughout the project
+- Components are organized in src/views (pages) and src/components (reusable UI)
+- Routing is handled by Vue Router with routes defined in src/router/index.ts
+- State management uses Pinia with stores in src/stores/
+- Telegram WebApp SDK integration is in src/composables/useTelegram.ts
+- Helper functions are stored in src/utils/ directory
+
+## Coding Patterns
+- Composition API is preferred over Options API
+- Use ref() and computed() from Vue for reactive state
+- Async operations should handle errors with try/catch
+- Tailwind CSS for styling with utility classes
+
+## Component Structure
+- Component files use .vue extension with script, template, and style tags
+- Script section should use setup() function for Composition API
+- Export reactive variables from setup() to make them available in template
+- Use computed properties for derived state
+
+## Authentication
+- Telegram WebApp SDK is used for authentication
+- User information is retrieved from Telegram.WebApp.initDataUnsafe.user
+- Implementation is wrapped in the useTelegram() composable
+- Mock environment is available in helper/telegramMock.ts
+
+## API Integration
+- API calls use the /api/* endpoints
+- Fetch API is used for HTTP requests
+- API responses should follow a consistent format
+- Error handling should provide user feedback
+
+## Features
+1. **BuyStar Component**
+   - Implements Telegram Stars purchase functionality
+   - Allows users to buy stars for themselves or as gifts
+   - Provides selectable star packages with different amounts
+   - Processes payments via TON cryptocurrency
+   - Uses a modal for payment details and confirmation
+   - Handles transaction verification
+
+2. **SwapStar Component**
+   - Implements Stars to TON exchange
+   - Allows users to select star amounts to exchange
+   - Calculates equivalent TON amount
+   - Handles wallet address input
+   - Manages the exchange process
+
+3. **BuyPremium Component**
+   - Implements Telegram Premium subscription purchase
+   - Allows users to buy Premium for themselves or as gifts
+   - Provides subscription options (3, 6, and 12 months)
+   - Processes payments via TON cryptocurrency
+   - Uses a modal for payment details and confirmation
+   - Handles transaction verification
+
+## Navigation
+- Bottom navigation bar in App.vue
+- Routes: Home, BuyStar, BuyPremium, SwapStar
+
+## Error Handling
+- Use try/catch for async operations
+- Display errors to users via SweetAlert2
+- Console errors for development debugging
+- Validate inputs before processing
+
+## UI Guidelines
+- Follow Telegram's design patterns
+- Dark theme with Telegram colors
+- Mobile-first responsive design
+- Clear, concise user instructions
+- Interactive feedback for user actions
+
+## Important Conventions
+- Prefix unused variables with underscore (_)
+- Use camelCase for variable and function names
+- Use PascalCase for component names
+- Add TON amount validation before processing
