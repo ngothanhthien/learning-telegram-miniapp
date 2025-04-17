@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { usePopup } from 'vue-tg'
-import { useMiniApp } from 'vue-tg/latest'
 import TonConnectTrigger from '../components/TonConnecTrigger.vue'
 import { useUserStore } from '../stores/useUserStore'
 
